@@ -19,9 +19,9 @@ def create_vector_store_from_pdf(file_path:str , session_id:str):
     vectorstore[session_id] = vectorstore
     return vectorstore
 
-def get_retriever():
-    if vectorstore is None:
-        return None
-    return vectorstore.as_retriever()
+def get_retriever(session_id: str):
+    if session_id in vectorstores:
+        return vectorstores[session_id].as_retriever()
+    return None
 
 
