@@ -2,6 +2,14 @@ import streamlit as st
 import requests
 import uuid
 import json
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+backend_research = os.getenv("backend_research")
+backend_pdf = os.getenv("backend_pdf")
+
 
 st.markdown("""
 <style>
@@ -36,7 +44,7 @@ div[data-testid="stFileUploader"] > div {
 """, unsafe_allow_html=True)
 
 #  backend URL
-API_URL = "http://127.0.0.1:8000/research"
+API_URL = backend_research
 
 st.set_page_config(page_title="AI Research Agent", layout="wide")
 
@@ -146,7 +154,7 @@ if uploaded_file and not st.session_state.pdf_uploaded:
 
     try:
         requests.post(
-            "http://127.0.0.1:8000/upload-pdf",
+            backend_pdf,
             params={"session_id": st.session_state.session_id},
             files={
                 "file": (
