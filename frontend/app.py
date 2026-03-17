@@ -3,6 +3,38 @@ import requests
 import uuid
 import json
 
+st.markdown("""
+<style>
+/* Fix bottom container */
+div[data-testid="stHorizontalBlock"] {
+    position: fixed;
+    bottom: 20px;
+    left: 10%;
+    width: 80%;
+    background-color: #0e1117;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 1000;
+}
+
+/* Hide default file uploader box */
+div[data-testid="stFileUploader"] {
+    width: 125px;
+}
+
+/* Make it look like icon */
+div[data-testid="stFileUploader"] > div {
+    border: none;
+    background: transparent;
+}
+
+/* Prevent content overlap */
+.main {
+    padding-bottom: 120px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 #  backend URL
 API_URL = "http://127.0.0.1:8000/research"
 
@@ -55,7 +87,18 @@ for msg in st.session_state.messages:
         render_response(msg["content"])
 
 # 🔹 user input
-query = st.chat_input("Ask your research question...")
+
+col1, col2 = st.columns([1, 8])
+
+with col1:
+    uploaded_file = st.file_uploader("", type=["pdf"], 
+                                     label_visibility="collapsed" , key="pdf_uploader")
+    st.markdown("📎",unsafe_allow_html=True)
+
+with col2:
+    query = st.chat_input("Ask your research question...")
+    
+    
 
 if query:
     # show user message
@@ -92,3 +135,36 @@ if query:
         "role": "assistant",
         "content": answer
     })
+    
+    
+
+if "pdf_uploaded" not in st.session_state:
+    st.session_state.pdf_uploaded = False
+
+if uploaded_file and not st.session_state.pdf_uploaded:
+    st.write("Uploading:", uploaded_file.name)
+
+    try:
+        requests.post(
+            "http://127.0.0.1:8000/upload-pdf",
+            params={"session_id": st.session_state.session_id},
+            files={
+                "file": (
+                    uploaded_file.name,
+                    uploaded_file.getvalue(),
+                    "application/pdf"
+                )
+            },
+            timeout=3600
+        )
+
+        st.session_state.pdf_uploaded = True
+        st.session_state.pdf_name = uploaded_file.name
+
+        st.success("✅ PDF uploaded!")
+
+    except Exception as e:
+        st.error(f"Upload failed: {e}")
+        
+        
+        
