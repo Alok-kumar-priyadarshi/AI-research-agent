@@ -20,8 +20,8 @@ def create_vector_store_from_pdf(file_path:str , session_id:str):
     return vectorstore
 
 def get_retriever(session_id: str):
-    if session_id in vectorstores:
-        return vectorstores[session_id].as_retriever()
+    if session_id in vectorstore:
+        return vectorstore[session_id].as_retriever()
     return None
 
 
