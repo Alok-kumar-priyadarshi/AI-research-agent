@@ -6,13 +6,17 @@ from app.agent import get_agent
 from app.formatter import format_response
 import time
 from app.cache import get_from_cache , save_to_cache
-from app.rag import create_vector_store
+# from app.rag import create_vector_store
 from app.memory import get_memory
 import asyncio
 from app.utils.router import needs_realtime_data
+from fastapi import UploadFile, File
+import shutil
+from app.rag import create_vector_store_from_pdf , get_retriever
 
-vectorstore = create_vector_store()
-retriever = vectorstore.as_retriever()
+
+# vectorstore = create_vector_store()
+# retriever = vectorstore.as_retriever()
 
 app = FastAPI()
 
@@ -68,22 +72,37 @@ async def research(request: ResearchRequest):
         {request.query}
         """
         else:
-            # 👉 RAG PATH
-            docs = await asyncio.to_thread(
-                retriever.get_relevant_documents,
-                request.query
-            )
+            
+            retriever = get_retriever(request.session_id)
 
-            context = "\n".join([d.page_content for d in docs])
+            if retriever:
+                docs = await asyncio.to_thread(
+                    retriever.get_relevant_documents,
+                    request.query
+                )
 
-            enriched_query = f"""
-        Use the provided context to answer.
+                context = "\n".join([d.page_content for d in docs])
+
+                enriched_query = f"""
+                Use the provided context to answer.
+
+                Chat History:
+                {chat_history}
+
+                Context:
+                {context}
+
+                User Query:
+                {request.query}
+                """
+            else:
+                context = ""
+
+                enriched_query = f"""
+        No internal documents available.
 
         Chat History:
         {chat_history}
-
-        Context:
-        {context}
 
         User Query:
         {request.query}
@@ -126,6 +145,23 @@ async def research(request: ResearchRequest):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...), session_id: str = None):
+    try:
+        import os
+        os.makedirs("uploads", exist_ok=True)
 
+        file_path = f"uploads/{session_id}_{file.filename}"
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        #  pass session_id
+        create_vector_store_from_pdf(file_path, session_id)
+
+        return {"message": "PDF processed for this session"}
+
+    except Exception as e:
+        return {"error": str(e)}
 
 
