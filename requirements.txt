@@ -1,0 +1,17 @@
+langchain-core
+langchain-groq
+python-dotenv
+langchain-community==0.0.34
+faiss-cpu
+sentence-transformers
+langchain==0.1.16
+ipykernel
+fastapi
+uvicorn
+pydantic
+pytest
+tavily-python
+streamlit 
+requests
+pypdf 
+python-multipart
