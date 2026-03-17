@@ -1,18 +1,27 @@
 from langchain_community.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.document_loaders import PyPDFLoader
 
-documents = [
-    "AI is transforming industries...",
-    "Machine learning is a subset of AI...",
-    "RAG systems combine retrieval with generation..."
+vectorstore = {}
+
+
+def create_vector_store_from_pdf(file_path:str , session_id:str):
+    # global vectorstore
+    loader = PyPDFLoader(file_path)
+    documents = loader.load()[:5] 
     
-]
-
-def create_vector_store():
-    splitter = CharacterTextSplitter(chunk_size=200, chunk_overlap=50)
-    docs = splitter.create_documents(documents)
+    splitter = CharacterTextSplitter(chunk_size=200,chunk_overlap=30)
+    docs = splitter.split_documents(documents)
+    
     embeddings = HuggingFaceEmbeddings()
     vectorstore = FAISS.from_documents(docs , embeddings)
+    vectorstore[session_id] = vectorstore
     return vectorstore
+
+def get_retriever():
+    if vectorstore is None:
+        return None
+    return vectorstore.as_retriever()
+
 
