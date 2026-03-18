@@ -60,9 +60,51 @@ if "messages" not in st.session_state:
 
 #  sidebar (extra control)
 with st.sidebar:
-    st.header("Settings")
+    st.header("⚙️ Settings")
+
     if st.button("Clear Chat"):
         st.session_state.messages = []
+
+    st.divider()
+
+    st.header("📂 Upload PDF")
+
+    uploaded_file = st.file_uploader(
+        "Upload your document",
+        type=["pdf"]
+    )
+
+    if "pdf_uploaded" not in st.session_state:
+        st.session_state.pdf_uploaded = False
+
+    if uploaded_file and not st.session_state.pdf_uploaded:
+        with st.spinner("Processing PDF..."):
+            try:
+                requests.post(
+                    backend_pdf,
+                    params={"session_id": st.session_state.session_id},
+                    files={
+                        "file": (
+                            uploaded_file.name,
+                            uploaded_file.getvalue(),
+                            "application/pdf"
+                        )
+                    },
+                    timeout=180
+                )
+
+                st.session_state.pdf_uploaded = True
+                st.session_state.pdf_name = uploaded_file.name
+
+                st.success("✅ PDF uploaded!")
+
+            except Exception as e:
+                st.error(f"Upload failed: {e}")
+
+    if st.session_state.get("pdf_uploaded"):
+        st.info(f"📄 Using: {st.session_state.pdf_name}")
+    if st.button("Reset Document"):
+        st.session_state.pdf_uploaded = False
 
 #  function to render structured response
 def render_response(answer):
@@ -95,17 +137,7 @@ for msg in st.session_state.messages:
         render_response(msg["content"])
 
 # 🔹 user input
-
-col1, col2 = st.columns([1, 8])
-
-with col1:
-    uploaded_file = st.file_uploader("", type=["pdf"], 
-                                     label_visibility="collapsed" , key="pdf_uploader")
-    st.markdown("📎",unsafe_allow_html=True)
-
-with col2:
-    query = st.chat_input("Ask your research question...")
-    
+query = st.chat_input("Ask your research question...")
     
 
 if query:
@@ -124,7 +156,7 @@ if query:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                response = requests.post(API_URL, json=payload, timeout=60)
+                response = requests.post(API_URL, json=payload, timeout=180)
                 data = response.json()
 
                 if "response" in data:
