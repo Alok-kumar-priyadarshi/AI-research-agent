@@ -6,7 +6,6 @@ from app.agent import get_agent
 from app.formatter import format_response
 import time
 from app.cache import get_from_cache , save_to_cache
-# from app.rag import create_vector_store
 from app.memory import get_memory
 import asyncio
 from app.utils.router import needs_realtime_data
@@ -14,9 +13,6 @@ from fastapi import UploadFile, File
 import shutil
 from app.rag import create_vector_store_from_pdf , get_retriever
 
-
-# vectorstore = create_vector_store()
-# retriever = vectorstore.as_retriever()
 
 app = FastAPI()
 
@@ -57,20 +53,15 @@ async def research(request: ResearchRequest):
 
         # 🔥 ROUTING LOGIC
         if needs_realtime_data(request.query):
-            # 👉 REAL-TIME PATH (skip RAG)
-            context = ""
-
             enriched_query = f"""
-        IMPORTANT:
-        - You MUST use the Web Search tool for latest or real-time information.
-        - Do NOT rely on old knowledge.
-
-        Chat History:
-        {chat_history}
-
-        User Query:
-        {request.query}
-        """
+            Provide the latest information. Use tools if necessary.
+        
+            Chat History:
+            {chat_history}
+        
+            User Query:
+            {request.query}
+            """
         else:
             
             retriever = get_retriever(request.session_id)
@@ -111,11 +102,25 @@ async def research(request: ResearchRequest):
         agent = get_agent()
 
         try:
-            raw_output = await asyncio.to_thread(agent.run, enriched_query)
+            result = await asyncio.to_thread(
+                agent.invoke,
+                {"input": enriched_query}
+            )
+            raw_output = result["output"]
+        
         except Exception as e:
+            # ✅ SAFE FALLBACK (NO TOOL CALL)
             llm = get_llm()
+        
+            clean_query = f"""
+            Answer the question directly without using any tools.
+        
+            Question:
+            {request.query}
+            """
+        
             raw_output = await asyncio.to_thread(
-                lambda: llm.invoke(enriched_query).content
+                lambda: llm.invoke(clean_query).content
             )
 
         #  FORMAT
